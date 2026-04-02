@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>機器QRコード検索ツール</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px; min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px; margin: 0 auto; background: white;
+            border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 30px; text-align: center;
+        }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header-links {
+            margin-top: 15px;
+        }
+        .header-links a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            margin: 0 5px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .header-links a:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .content { padding: 30px; }
+        
+        /* PowerApps URL設定セクション */
+        .url-section {
+            border-radius: 8px; padding: 20px; margin-bottom: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #dee2e6;
+        }
+        .url-section.has-url {
+            border-color: #4caf50;
+            background: linear-gradient(135deg, #f1f8f4 0%, #e8f5e9 100%);
+        }
+        .url-section.no-url {
+            border-color: #f44336;
+            background: linear-gradient(135deg, #fff8f8 0%, #ffebee 100%);
+        }
+        .url-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .url-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .url-status.saved {
+            background: #d4edda;
+            color: #155724;
+        }
+        .url-status.not-saved {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        /* URL表示モード */
+        .url-display-mode {
+            display: block;
+        }
+        .url-display-mode.hidden {
+            display: none;
+        }
+        .url-display-box {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            word-break: break-all;
+            color: #333;
+            min-height: 45px;
+            display: flex;
+            align-items: center;
+        }
+        .url-display-box.empty {
+            color: #f44336;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-style: italic;
+            justify-content: center;
+        }
+        .url-display-box.has-url {
+            border-color: #4caf50;
+            background: #f9fff9;
+        }
+        
+        /* URL編集モード */
+        .url-edit-mode {
+            display: none;
+        }
+        .url-edit-mode.show {
+            display: block;
+        }
+        .url-edit-form {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .url-edit-form label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+        }
+        .url-edit-form input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+        .url-edit-form input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-success { background: #4caf50; color: #fff; }
+        .btn-secondary { background: #757575; color: #fff; }
+        .btn-danger { background: #f44336; color: #fff; }
+        .btn-warning { background: #ff9800; color: #fff; }
+        .btn-info { background: #00bcd4; color: #fff; }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+        
+        /* ローディング表示 */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 18px;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .search-box { position: relative; margin-bottom: 30px; }
+        .search-input {
+            width: 100%; padding: 15px 50px 15px 20px;
+            border: 2px solid #e0e0e0; border-radius: 50px;
+            font-size: 16px; transition: all 0.3s;
+        }
+        .search-input:focus {
+            outline: none; border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .search-icon {
+            position: absolute; right: 20px; top: 50%;
+            transform: translateY(-50%); font-size: 20px; color: #666;
+        }
+        .category-filter {
+            display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 30px;
+        }
+        .category-btn {
+            padding: 10px 20px; border: 2px solid #e0e0e0;
+            background: white; border-radius: 25px; cursor: pointer;
+            transition: all 0.3s; font-size: 14px; font-weight: 500;
+        }
+        .category-btn:hover { border-color: #667eea; color: #667eea; }
+        .category-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border-color: transparent;
+        }
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .device-card {
+            background: white; border: 2px solid #e0e0e0;
+            border-radius: 12px; padding: 20px; text-align: center;
+            transition: all 0.3s; cursor: pointer;
+        }
+        .device-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+            transform: translateY(-4px);
+        }
+        .device-card.hidden { display: none; }
+        .device-card h3 {
+            color: #667eea; margin-bottom: 8px; font-size: 18px;
+        }
+        .device-card .management {
+            color: #764ba2; font-weight: bold;
+            font-size: 14px; margin-bottom: 6px;
+        }
+        .device-card .serial {
+            color: #666; font-size: 14px; margin-bottom: 15px;
+        }
+        .device-card .category-tag {
+            display: inline-block; padding: 4px 12px;
+            background: #e3f2fd; color: #1976d2;
+            border-radius: 12px; font-size: 12px; margin-bottom: 15px;
+        }
+        .modal {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; background: rgba(0,0,0,0.7);
+            z-index: 1000; justify-content: center; align-items: center;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: white; border-radius: 16px; padding: 40px;
+            max-width: 500px; width: 90%; text-align: center;
+            position: relative; max-height: 90vh; overflow-y: auto;
+        }
+        .modal-close {
+            position: absolute; top: 15px; right: 15px;
+            font-size: 28px; cursor: pointer; color: #666;
+            background: none; border: none; line-height: 1;
+        }
+        .modal-close:hover { color: #000; }
+        .modal h2 { color: #667eea; margin-bottom: 20px; }
+        .modal-qr {
+            display: inline-block; padding: 20px;
+            background: white; border-radius: 8px; margin: 20px 0;
+        }
+        .info-box {
+            background: #e3f2fd; border-left: 4px solid #2196f3;
+            padding: 15px; margin-bottom: 25px; border-radius: 4px;
+            text-align: left;
+        }
+        .no-results {
+            text-align: center; padding: 60px 20px; color: #666;
+        }
+        .no-results-icon { font-size: 64px; margin-bottom: 20px; }
+        .device-count {
+            text-align: center;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            color: #667eea;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .cache-clear-section {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .cache-clear-section strong {
+            display: block;
+            margin-bottom: 10px;
+            color: #856404;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .notification.success {
+            background: #4caf50;
+            color: white;
+        }
+        .notification.error {
+            background: #f44336;
+            color: white;
+        }
+        .notification.warning {
+            background: #ff9800;
+            color: white;
+        }
+        
+        /* スマホ最適化 */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .device-grid { grid-template-columns: 1fr; }
+            .header h1 { font-size: 22px; }
+            .header p { font-size: 13px; }
+            .content { padding: 20px; }
+            .modal-content { padding: 30px 20px; }
+            .category-filter { gap: 8px; }
+            .category-btn { padding: 8px 16px; font-size: 13px; }
+            .search-input { font-size: 16px; padding: 12px 45px 12px 15px; }
+            .notification {
+                right: 10px;
+                left: 10px;
+                top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🔍 機器QRコード検索ツール</h1>
+        <p>機器を検索してQRコードをスキャン</p>
+        <div class="header-links">
+            <a href="index.html">🔍 検索</a>
+            <a href="generator.html">📱 QR一括生成</a>
+        </div>
+    </div>
+    <div class="content">
+        <!-- PowerApps URL設定 -->
+        <div class="url-section" id="urlSection">
+            <h3>
+                <span>🔗</span>
+                <span>PowerApps ベースURL設定</span>
+                <span class="url-status" id="urlStatus">
+                    <span id="urlStatusIcon">⚠️</span>
+                    <span id="urlStatusText">未設定</span>
+                </span>
+            </h3>
+            
+            <!-- 表示モード -->
+            <div class="url-display-mode" id="urlDisplayMode">
+                <div class="url-display-box" id="urlDisplayBox">
+                    <span id="urlDisplayText">URLが設定されていません</span>
+                </div>
+            </div>
+            
+            <!-- 編集モード -->
+            <div class="url-edit-mode" id="urlEditMode">
+                <div class="url-edit-form">
+                    <label for="urlInput">📝 PowerApps URL を入力してください</label>
+                    <input 
+                        type="text" 
+                        id="urlInput"
+                        placeholder="https://apps.powerapps.com/play/e/default-.../a/...?tenantId=..."
+                        spellcheck="false"
+                    >
+                </div>
+            </div>
+            
+            <!-- ボタン（表示モード） -->
+            <div id="urlDisplayButtons">
+                <button class="btn btn-primary" onclick="enterEditMode()">
+                    ✏️ URL編集
+                </button>
+                <button class="btn btn-info" onclick="testURL()">
+                    🔍 URL確認
+                </button>
+                <button class="btn btn-danger" onclick="clearURL()">
+                    🗑️ URLクリア
+                </button>
+            </div>
+            
+            <!-- ボタン（編集モード） -->
+            <div id="urlEditButtons" style="display: none;">
+                <button class="btn btn-success" onclick="saveURL()">
+                    💾 保存
+                </button>
+                <button class="btn btn-secondary" onclick="cancelEdit()">
+                    ✖ キャンセル
+                </button>
+                <button class="btn btn-info" onclick="testURL()">
+                    🔍 URL確認
+                </button>
+            </div>
+        </div>
+
+        <!-- キャッシュクリアセクション -->
+        <div class="cache-clear-section">
+            <strong>🔄 キャッシュ管理</strong>
+            <p style="font-size: 13px; color: #856404; margin-bottom: 10px;">
+                データが更新されない場合や、古い情報が表示される場合はキャッシュをクリアしてください。
+            </p>
+            <button class="btn btn-warning btn-sm" onclick="clearCache()">
+                🗑️ キャッシュをクリア
+            </button>
+            <button class="btn btn-info btn-sm" onclick="reloadPage()">
+                🔄 ページ再読み込み
+            </button>
+        </div>
+
+        <div class="info-box">
+            <strong>💡 使い方:</strong><br>
+            1. 上記でPowerApps URLを設定して「保存」をクリック<br>
+            2. 機器名、シリアル番号、または管理番号で検索<br>
+            3. 該当機器をクリックしてQRコードを表示<br>
+            4. スマホのカメラでQRコードをスキャン<br>
+            5. PowerAppsが起動して貸出申請
+        </div>
+
+        <div id="loadingArea" class="loading">
+            <div class="loading-spinner"></div>
+            <p>📂 devices.csv を読み込み中...</p>
+        </div>
+
+        <div id="mainArea" style="display: none;">
+            <div class="device-count" id="deviceCount">
+                📦 登録機器: <span id="deviceCountNum">0</span>件
+            </div>
+
+            <div class="search-box">
+                <input type="text" id="searchInput" class="search-input" 
+                       placeholder="機器名、シリアル番号、または管理番号で検索...">
+                <span class="search-icon">🔍</span>
+            </div>
+            
+            <div class="category-filter" id="categoryFilter">
+                <button class="category-btn active" onclick="filterByCategory('all', event)">全て</button>
+            </div>
+            
+            <div class="device-grid" id="deviceGrid"></div>
+            
+            <div class="no-results" id="noResults" style="display: none;">
+                <div class="no-results-icon">🔍</div>
+                <h3>該当する機器が見つかりません</h3>
+                <p>検索条件を変更してお試しください</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- モーダル -->
+<div class="modal" id="modal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal()">×</button>
+        <h2 id="modalTitle"></h2>
+        <div id="modalManagement" style="color: #764ba2; font-weight: bold; margin-bottom: 10px;"></div>
+        <div id="modalSerial" style="color: #666; margin-bottom: 20px;"></div>
+        <div class="modal-qr" id="modalQR"></div>
+        <p style="color: #666; font-size: 14px;">
+            📱 スマホのカメラでスキャンしてください
+        </p>
+    </div>
+</div>
+
+<script>
+    const STORAGE_KEY = 'powerapps_base_url';
+    const CACHE_KEY = 'devices_csv_cache';
+    const CACHE_TIMESTAMP_KEY = 'devices_csv_cache_timestamp';
+    const CACHE_DURATION = 30 * 60 * 1000; // 30分
+
+    let currentBaseURL = '';
+    let devices = [];
+    let currentCategory = 'all';
+    let categories = new Set();
+
+    /* ===== 初期化 ===== */
+    async function init() {
+        loadBaseURL();
+        try {
+            await loadCSVData();
+            document.getElementById('loadingArea').style.display = 'none';
+            document.getElementById('mainArea').style.display = 'block';
+            document.getElementById('searchInput').addEventListener('keyup', filterDevices);
+        } catch (error) {
+            document.getElementById('loadingArea').innerHTML = `
+                <div class="error-message">
+                    <h3>❌ CSVファイルの読み込みに失敗しました</h3>
+                    <p>${error.message}</p>
+                    <p style="margin-top: 15px; font-size: 14px;">
+                        <strong>確認事項:</strong><br>
+                        • devices.csv が同じフォルダにあるか確認<br>
+                        • ファイル名が正確か確認（大文字小文字も区別）<br>
+                        • CSVファイルがUTF-8で保存されているか確認
+                    </p>
+                    <button class="btn btn-warning" onclick="clearCache(); location.reload();" style="margin-top: 15px;">
+                        🔄 キャッシュクリアして再試行
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    /* ===== URL管理 ===== */
+    function loadBaseURL() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        currentBaseURL = saved || '';
+        updateURLDisplay();
+    }
+
+    function updateURLDisplay() {
+        const urlDisplayText = document.getElementById('urlDisplayText');
+        const urlDisplayBox = document.getElementById('urlDisplayBox');
+        const urlSection = document.getElementById('urlSection');
+        const urlStatus = document.getElementById('urlStatus');
+        const urlStatusIcon = document.getElementById('urlStatusIcon');
+        const urlStatusText = document.getElementById('urlStatusText');
+        
+        if (currentBaseURL) {
+            urlDisplayText.textContent = currentBaseURL;
+            urlDisplayBox.classList.remove('empty');
+            urlDisplayBox.classList.add('has-url');
+            urlSection.classList.remove('no-url');
+            urlSection.classList.add('has-url');
+            urlStatus.classList.remove('not-saved');
+            urlStatus.classList.add('saved');
+            urlStatusIcon.textContent = '✅';
+            urlStatusText.textContent = '保存済み';
+        } else {
+            urlDisplayText.textContent = 'URLが設定されていません（✏️ URL編集ボタンをクリック）';
+            urlDisplayBox.classList.add('empty');
+            urlDisplayBox.classList.remove('has-url');
+            urlSection.classList.add('no-url');
+            urlSection.classList.remove('has-url');
+            urlStatus.classList.add('not-saved');
+            urlStatus.classList.remove('saved');
+            urlStatusIcon.textContent = '⚠️';
+            urlStatusText.textContent = '未設定';
+        }
+    }
+
+    function enterEditMode() {
+        document.getElementById('urlDisplayMode').classList.add('hidden');
+        document.getElementById('urlEditMode').classList.add('show');
+        document.getElementById('urlDisplayButtons').style.display = 'none';
+        document.getElementById('urlEditButtons').style.display = 'block';
+        
+        // 現在のURLを入力欄にセット
+        document.getElementById('urlInput').value = currentBaseURL;
+        document.getElementById('urlInput').focus();
+    }
+
+    function cancelEdit() {
+        document.getElementById('urlDisplayMode').classList.remove('hidden');
+        document.getElementById('urlEditMode').classList.remove('show');
+        document.getElementById('urlDisplayButtons').style.display = 'block';
+        document.getElementById('urlEditButtons').style.display = 'none';
+    }
+
+    function saveURL() {
+        const url = document.getElementById('urlInput').value.trim();
+        
+        if (!url) {
+            showNotification('❌ URLを入力してください', 'error');
+            document.getElementById('urlInput').focus();
+            return;
+        }
+        
+        if (!url.startsWith('https://')) {
+            if (!confirm('⚠️ https:// で始まらないURLです。\nそれでも保存しますか？')) {
+                return;
+            }
+        }
+        
+        if (!url.includes('powerapps.com')) {
+            if (!confirm('⚠️ PowerAppsのURLではない可能性があります。\nそれでも保存しますか？')) {
+                return;
+            }
+        }
+        
+        localStorage.setItem(STORAGE_KEY, url);
+        currentBaseURL = url;
+        updateURLDisplay();
+        cancelEdit();
+        showNotification('✅ URLを保存しました', 'success');
+    }
+
+    function testURL() {
+        const url = document.getElementById('urlInput').value.trim() || currentBaseURL;
+        
+        if (!url) {
+            showNotification('❌ URLを入力してください', 'error');
+            return;
+        }
+        
+        const testUrl = url + '&test=true';
+        const confirmed = confirm(
+            '🔍 URLテスト\n\n' +
+            '新しいタブでPowerAppsを開きます。\n' +
+            '正常に開けることを確認してください。\n\n' +
+            '開きますか？'
+        );
+        
+        if (confirmed) {
+            window.open(testUrl, '_blank');
+            showNotification('🔍 新しいタブでURLを開きました', 'warning');
+        }
+    }
+
+    function clearURL() {
+        if (!confirm('⚠️ 保存されているURLをクリアしますか？\n\nクリア後は再度URLを設定する必要があります。')) {
+            return;
+        }
+        
+        localStorage.removeItem(STORAGE_KEY);
+        currentBaseURL = '';
+        updateURLDisplay();
+        showNotification('✅ URLをクリアしました', 'success');
+    }
+
+    /* ===== キャッシュ管理 ===== */
+    function clearCache() {
+        if (confirm('🗑️ キャッシュをクリアしますか？\n\n次回読み込み時に最新データを取得します。')) {
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+            showNotification('✅ キャッシュをクリアしました', 'success');
+        }
+    }
+
+    function reloadPage() {
+        if (confirm('🔄 ページを再読み込みしますか？\n\n最新のデータを取得します。')) {
+            location.reload(true);
+        }
+    }
+
+    function showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'slideIn 0.3s ease-out reverse';
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 3000);
+    }
+
+    /* ===== CSV読み込み（キャッシュ対応） ===== */
+    async function loadCSVData() {
+        const cachedData = localStorage.getItem(CACHE_KEY);
+        const cacheTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+        const now = Date.now();
+
+        if (cachedData && cacheTimestamp) {
+            const age = now - parseInt(cacheTimestamp, 10);
+            if (age < CACHE_DURATION) {
+                console.log('📦 キャッシュからデータを読み込みました');
+                parseCSVData(cachedData);
+                return;
+            }
+        }
+
+        console.log('🌐 サーバーから最新データを取得中...');
+        const timestamp = new Date().getTime();
+        const response = await fetch(`devices.csv?t=${timestamp}`);
+        
+        if (!response.ok) {
+            throw new Error('devices.csv が見つかりません。ファイルがアップロードされているか確認してください。');
+        }
+        
+        const text = await response.text();
+        
+        localStorage.setItem(CACHE_KEY, text);
+        localStorage.setItem(CACHE_TIMESTAMP_KEY, now.toString());
+        
+        parseCSVData(text);
+    }
+
+    function parseCSVData(text) {
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        
+        if (lines.length < 2) {
+            throw new Error('CSVファイルにデータがありません');
+        }
+
+        const dataLines = lines.slice(1);
+        devices = [];
+        categories.clear();
+
+        dataLines.forEach((line, index) => {
+            const parts = line.split(',').map(p => p.trim());
+            if (parts.length >= 4 && parts[1] && parts[2]) {
+                const device = {
+                    managementNumber: parts[0] || '',
+                    name: parts[1],
+                    serial: parts[2],
+                    category: parts[3] || 'その他'
+                };
+                devices.push(device);
+                categories.add(device.category);
+            }
+        });
+
+        if (devices.length === 0) {
+            throw new Error('有効なデータが見つかりませんでした');
+        }
+
+        document.getElementById('deviceCountNum').textContent = devices.length;
+        updateCategoryButtons();
+        renderDevices();
+    }
+
+    /* ===== カテゴリーボタン更新 ===== */
+    function updateCategoryButtons() {
+        const filterContainer = document.getElementById('categoryFilter');
+        filterContainer.innerHTML = '<button class="category-btn active" onclick="filterByCategory(\'all\', event)">全て</button>';
+        
+        Array.from(categories).sort().forEach(cat => {
+            const btn = document.createElement('button');
+            btn.className = 'category-btn';
+            btn.textContent = cat;
+            btn.onclick = (e) => filterByCategory(cat, e);
+            filterContainer.appendChild(btn);
+        });
+    }
+
+    /* ===== 機器カード表示 ===== */
+    function renderDevices() {
+        const grid = document.getElementById('deviceGrid');
+        grid.innerHTML = '';
+
+        devices.forEach((device) => {
+            const card = document.createElement('div');
+            card.className = 'device-card';
+            card.setAttribute('data-name', device.name.toLowerCase());
+            card.setAttribute('data-serial', device.serial.toLowerCase());
+            card.setAttribute('data-management', device.managementNumber.toLowerCase());
+            card.setAttribute('data-category', device.category);
+            card.onclick = () => showModal(device);
+
+            card.innerHTML = `
+                ${device.managementNumber ? '<div class="management">🏷️ ' + escapeHtml(device.managementNumber) + '</div>' : ''}
+                <h3>${escapeHtml(device.name)}</h3>
+                <div class="serial">${escapeHtml(device.serial)}</div>
+                <div class="category-tag">${escapeHtml(device.category)}</div>
+                <div style="color: #667eea; font-size: 14px; margin-top: 10px;">
+                    📱 クリックしてQRコード表示
+                </div>
+            `;
+
+            grid.appendChild(card);
+        });
+
+        checkNoResults();
+    }
+
+    /* ===== カテゴリーフィルタ ===== */
+    function filterByCategory(category, event) {
+        currentCategory = category;
+        
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        
+        filterDevices();
+    }
+
+    /* ===== 検索フィルタ ===== */
+    function filterDevices() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const cards = document.querySelectorAll('.device-card');
+
+        cards.forEach(card => {
+            const name = card.getAttribute('data-name');
+            const serial = card.getAttribute('data-serial');
+            const management = card.getAttribute('data-management');
+            const category = card.getAttribute('data-category');
+
+            const matchesSearch = name.includes(searchTerm) || 
+                                serial.includes(searchTerm) || 
+                                management.includes(searchTerm);
+            const matchesCategory = currentCategory === 'all' || category === currentCategory;
+
+            if (matchesSearch && matchesCategory) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+
+        checkNoResults();
+    }
+
+    /* ===== 結果なし表示 ===== */
+    function checkNoResults() {
+        const visibleCards = document.querySelectorAll('.device-card:not(.hidden)');
+        const noResults = document.getElementById('noResults');
+        
+        if (devices.length > 0 && visibleCards.length === 0) {
+            noResults.style.display = 'block';
+        } else {
+            noResults.style.display = 'none';
+        }
+    }
+
+    /* ===== モーダル表示 ===== */
+    function showModal(device) {
+        if (!currentBaseURL) {
+            showNotification('⚠️ PowerApps URLが設定されていません', 'error');
+            enterEditMode();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalManagement = document.getElementById('modalManagement');
+        const modalSerial = document.getElementById('modalSerial');
+        const modalQR = document.getElementById('modalQR');
+
+        modalTitle.textContent = device.name;
+        modalManagement.textContent = device.managementNumber ? `🏷️ ${device.managementNumber}` : '';
+        modalSerial.textContent = `シリアル番号: ${device.serial}`;
+        modalQR.innerHTML = '';
+
+        const encodedManagement = encodeURIComponent(device.managementNumber || '');
+        const encodedEquipment = encodeURIComponent(device.name);
+        const encodedSerial = encodeURIComponent(device.serial);
+        
+        const timestamp = new Date().getTime();
+        const fullUrl = `${currentBaseURL}&managementNumber=${encodedManagement}&equipment=${encodedEquipment}&serial=${encodedSerial}&t=${timestamp}`;
+
+        new QRCode(modalQR, {
+            text: fullUrl,
+            width: 256,
+            height: 256,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        modal.classList.add('show');
+    }
+
+    /* ===== HTML エスケープ ===== */
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    /* ===== モーダル閉じる ===== */
+    function closeModal() {
+        document.getElementById('modal').classList.remove('show');
+    }
+
+    document.getElementById('modal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    window.addEventListener('load', init);
+</script>
+</body>
+</html>
